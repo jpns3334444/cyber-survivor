@@ -14,8 +14,10 @@ func activate(pos: Vector2, value: int):
 	visible = true
 	is_magnetized = false
 	
-	collision_layer = 8
-	collision_mask = 1
+	monitoring = true   # Detect others
+	monitorable = false # Don't be detected
+	set_collision_layer_value(4, true)  # Pickup layer
+	set_collision_mask_value(1, true)   # Detect player layer
 	
 	if not has_node("CollisionShape2D"):
 		var collision_shape = CollisionShape2D.new()
@@ -46,12 +48,28 @@ func _physics_process(delta):
 	
 	if is_magnetized:
 		var direction = (magnet_target - position).normalized()
-		position += direction * magnet_speed * delta
+		var distance = position.distance_to(magnet_target)
+		
+		# Accelerate as it gets closer
+		var speed = magnet_speed * (1.0 + (100.0 - min(distance, 100.0)) / 50.0)
+		position += direction * speed * delta
+		
+		# Collect if very close
+		if distance < 10:
+			var player = EntityManager.get_player()
+			if player:
+				_on_body_entered(player)
 
 func _on_body_entered(body: Node2D):
-	if body.name.begins_with("Player") or body.has_method("get_component"):
-		CombatSystem.add_xp(xp_value)
-		deactivate()
+	if not is_active:
+		return
+	
+	# Check if it's the player
+	if body.has_method("get_component"):
+		var player_health = body.get_component("health")
+		if player_health and player_health.max_health > 0:  # Confirm it's the player
+			CombatSystem.add_xp(xp_value)
+			deactivate()
 
 func _draw():
 	var size = 6.0 + sin(Time.get_time_from_start() * 5.0) * 2.0

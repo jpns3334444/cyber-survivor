@@ -23,6 +23,9 @@ func _ready():
 	CombatSystem.xp_gained.connect(_on_xp_gained)
 	
 	set_process_input(true)
+	
+	# Auto-start the game
+	call_deferred("start_game")
 
 func _input(event):
 	if event is InputEventKey and event.pressed:
@@ -40,8 +43,23 @@ func _input(event):
 				_on_xp_gained(10)
 				print("Added 10 XP")
 			KEY_F5:
+				print("\n=== GAME STATS ===")
+				print("FPS: ", Engine.get_frames_per_second())
+				print("Pool Usage:")
 				var stats = PoolManager.get_pool_stats()
-				print("Pool stats: ", stats)
+				for key in stats:
+					print("  %s: %s" % [key, stats[key]])
+				print("Active Entities:")
+				print("  Enemies: ", EntityManager.get_entity_count())
+				var player = EntityManager.get_player()
+				if player and player.has_method("get_component"):
+					var health = player.get_component("health")
+					if health:
+						print("  Player Health: ", health.current)
+				print("Game Time: ", game_time)
+				print("Player Level: ", player_level)
+				print("Player XP: ", player_xp, "/", xp_required)
+				print("================\n")
 
 func _process(delta):
 	if current_state == State.PLAYING:

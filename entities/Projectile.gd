@@ -1,4 +1,4 @@
-extends Node2D
+extends Area2D
 
 var velocity: Vector2
 var damage: float
@@ -19,6 +19,23 @@ func activate(start_pos: Vector2, direction: Vector2, proj_damage: float, proj_s
 	set_physics_process(true)
 	time_alive = 0.0
 	hits = 0
+	
+	# Setup Area2D collision
+	monitoring = true
+	monitorable = false
+	set_collision_layer_value(3, true)  # Projectile layer
+	set_collision_mask_value(2, true)   # Hit enemies layer
+	
+	# Setup collision shape
+	if not has_node("CollisionShape2D"):
+		var collision_shape = CollisionShape2D.new()
+		var circle_shape = CircleShape2D.new()
+		circle_shape.radius = 4.0
+		collision_shape.shape = circle_shape
+		add_child(collision_shape)
+	
+	if not body_entered.is_connected(_on_body_entered):
+		body_entered.connect(_on_body_entered)
 	
 	EntityManager.register_entity(self, "projectile")
 
@@ -43,18 +60,18 @@ func _physics_process(delta):
 	if not viewport_rect.has_point(position):
 		deactivate()
 		return
+
+func _on_body_entered(body):
+	if not is_active:
+		return
 	
-	var enemies = EntityManager.get_enemies_in_range(position, 20.0)
-	for enemy in enemies:
-		if enemy.has_method("get_component"):
-			var health = enemy.get_component("health")
-			if health and health.has_method("take_damage"):
-				health.take_damage(damage)
-				hits += 1
-				
-				if hits >= pierce_count:
-					deactivate()
-					return
+	if body.has_method("get_component"):
+		var ai = body.get_component("ai")
+		if ai and body.get("enemy_data"):  # Confirm it's an enemy
+			CombatSystem.apply_damage(body, damage, self)
+			hits += 1
+			if hits >= pierce_count:
+				deactivate()
 
 func _draw():
 	draw_circle(Vector2.ZERO, 4, Color.YELLOW)

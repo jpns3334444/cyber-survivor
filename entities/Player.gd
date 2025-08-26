@@ -4,7 +4,10 @@ var movement: MovementComponent
 var health: HealthComponent  
 var weapon: WeaponComponent
 var magnet: MagnetComponent
+var damage_detector: Area2D
 var is_active := true
+var damage_cooldown := 0.0
+var flash_timer := 0.0
 
 func _ready():
 	movement = MovementComponent.new()
@@ -38,10 +41,35 @@ func _ready():
 	circle_shape.radius = GameConfig.player_data.collision_radius
 	collision_shape.shape = circle_shape
 	add_child(collision_shape)
+	
+	# Setup damage detector Area2D
+	damage_detector = Area2D.new()
+	damage_detector.name = "damage_detector"
+	damage_detector.monitoring = true
+	damage_detector.monitorable = false
+	damage_detector.set_collision_layer_value(1, false)  # Don't add to player layer
+	damage_detector.set_collision_mask_value(2, true)   # Detect enemy layer
+	
+	var detect_shape = CollisionShape2D.new()
+	var detect_circle = CircleShape2D.new()
+	detect_circle.radius = GameConfig.player_data.collision_radius
+	detect_shape.shape = detect_circle
+	damage_detector.add_child(detect_shape)
+	damage_detector.body_entered.connect(_on_enemy_contact)
+	add_child(damage_detector)
 
 func _physics_process(delta):
 	if not is_active:
 		return
+	
+	# Update damage cooldown
+	if damage_cooldown > 0:
+		damage_cooldown -= delta
+	
+	# Update flash timer
+	if flash_timer > 0:
+		flash_timer -= delta
+		queue_redraw()
 	
 	var input = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	movement.set_direction(input)
@@ -50,7 +78,11 @@ func _physics_process(delta):
 	magnet.update(delta)
 
 func _draw():
-	draw_circle(Vector2.ZERO, GameConfig.player_data.collision_radius, Color.CYAN)
+	if flash_timer > 0:
+		# Draw white flash when taking damage
+		draw_circle(Vector2.ZERO, GameConfig.player_data.collision_radius, Color.WHITE)
+	else:
+		draw_circle(Vector2.ZERO, GameConfig.player_data.collision_radius, Color.CYAN)
 
 func get_component(name: String) -> Node:
 	return get_node_or_null(name)
@@ -58,3 +90,22 @@ func get_component(name: String) -> Node:
 func _on_died():
 	EventBus.player_died.emit()
 	is_active = false
+
+func _on_enemy_contact(body):
+	if damage_cooldown <= 0 and body.has_method("get_component"):
+		var ai = body.get_component("ai")
+		if ai and body.get("enemy_data"):  # Confirm it's an enemy
+			var damage_amount = body.enemy_data.damage
+			health.take_damage(damage_amount)
+			damage_cooldown = 0.5  # 0.5s invincibility frames
+			flash_timer = 0.1      # Brief white flash
+			
+			# Add hit pause effect
+			if Engine.time_scale == 1.0:
+				Engine.time_scale = 0.1
+				await get_tree().create_timer(0.05, true, false, true).timeout
+				Engine.time_scale = 1.0
+
+func flash_white():
+	flash_timer = 0.1
+	queue_redraw()
