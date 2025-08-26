@@ -1,0 +1,10 @@
+[gd_resource type="PlayerData" script_class="PlayerData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/PlayerData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+max_health = 100
+move_speed = 200.0
+collision_radius = 16.0
+starting_weapon = "pistol"

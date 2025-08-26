@@ -1,0 +1,17 @@
+[gd_resource type="WeaponList" script_class="WeaponList" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://data/WeaponList.gd" id="1"]
+[ext_resource type="Script" path="res://data/WeaponResource.gd" id="2"]
+
+[sub_resource type="WeaponResource" id="WeaponResource_1"]
+script = ExtResource("2")
+id = "pistol"
+damage = 10.0
+fire_rate = 0.5
+projectile_speed = 600.0
+pierce = 1
+projectile_count = 1
+
+[resource]
+script = ExtResource("1")
+weapons = Array[WeaponResource]([SubResource("WeaponResource_1")])

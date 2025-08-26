@@ -1,0 +1,12 @@
+[gd_resource type="GameSettings" script_class="GameSettings" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/GameSettings.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+window_size = Vector2(1280, 720)
+physics_fps = 60
+max_enemies = 100
+max_projectiles = 50
+base_pickup_range = 50.0
+base_xp_requirements = Array[int]([5, 10, 20, 35, 55, 80, 120, 160, 220, 300])

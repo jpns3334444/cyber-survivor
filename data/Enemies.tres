@@ -1,0 +1,18 @@
+[gd_resource type="EnemyList" script_class="EnemyList" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://data/EnemyList.gd" id="1"]
+[ext_resource type="Script" path="res://data/EnemyResource.gd" id="2"]
+
+[sub_resource type="EnemyResource" id="EnemyResource_1"]
+script = ExtResource("2")
+id = "zombie"
+health = 20
+speed = 80.0
+damage = 5
+xp_value = 1
+size = Vector2(24, 24)
+color = Color(1, 0, 0, 1)
+
+[resource]
+script = ExtResource("1")
+enemies = Array[EnemyResource]([SubResource("EnemyResource_1")])

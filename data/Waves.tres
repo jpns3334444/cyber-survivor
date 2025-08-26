@@ -1,0 +1,22 @@
+[gd_resource type="WaveData" script_class="WaveData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://data/WaveData.gd" id="1"]
+[ext_resource type="Script" path="res://data/Wave.gd" id="2"]
+
+[sub_resource type="Wave" id="Wave_1"]
+script = ExtResource("2")
+enemy_types = Array[String](["zombie"])
+spawn_rate = 2.0
+max_enemies = 10
+duration = 60.0
+
+[sub_resource type="Wave" id="Wave_2"]
+script = ExtResource("2")
+enemy_types = Array[String](["zombie"])
+spawn_rate = 1.5
+max_enemies = 20
+duration = 60.0
+
+[resource]
+script = ExtResource("1")
+waves = Array[Wave]([SubResource("Wave_1"), SubResource("Wave_2")])
