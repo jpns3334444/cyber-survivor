@@ -80,10 +80,12 @@ func _physics_process(delta):
 	# Update flash timer
 	if flash_timer > 0:
 		flash_timer -= delta
-		queue_redraw()
 	
 	ai.update(delta)
 	movement.update(delta)
+	
+	# Always redraw enemies so they're visible!
+	queue_redraw()  # Add this line - was missing!
 
 func _draw():
 	if enemy_data:

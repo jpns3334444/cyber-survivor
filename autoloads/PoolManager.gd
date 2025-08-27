@@ -4,26 +4,28 @@ var _projectile_pool := []
 var _enemy_pool := []
 var _pickup_pool := []
 
-var _projectile_scene: PackedScene
-var _enemy_scene: PackedScene
-var _xporb_scene: PackedScene
 
 func _ready():
-	_projectile_scene = preload("res://entities/Projectile.tscn") if ResourceLoader.exists("res://entities/Projectile.tscn") else null
-	_enemy_scene = preload("res://entities/Enemy.tscn") if ResourceLoader.exists("res://entities/Enemy.tscn") else null
-	_xporb_scene = preload("res://entities/XPOrb.tscn") if ResourceLoader.exists("res://entities/XPOrb.tscn") else null
 	_create_pools()
 
 func _create_pools():
+	print("[PoolManager] Creating object pools...")
+	
+	# Create projectiles - MUST be Area2D since Projectile extends Area2D
+	print("[PoolManager] Creating projectile pool...")
 	for i in 50:
-		var proj = Node2D.new()
+		var proj = Area2D.new()  # FIXED: was Node2D, must be Area2D
 		proj.set_script(preload("res://entities/Projectile.gd"))
 		proj.set("is_active", false)
 		proj.visible = false
 		proj.set_physics_process(false)
+		proj.set_process(false)  # Also disable process
 		_projectile_pool.append(proj)
 		add_child(proj)
+	print("[PoolManager] Created ", _projectile_pool.size(), " projectiles")
 	
+	# Create enemies - CharacterBody2D is correct
+	print("[PoolManager] Creating enemy pool...")
 	for i in 100:
 		var enemy = CharacterBody2D.new()
 		enemy.set_script(preload("res://entities/Enemy.gd"))
@@ -32,30 +34,43 @@ func _create_pools():
 		enemy.set_physics_process(false)
 		_enemy_pool.append(enemy)
 		add_child(enemy)
+	print("[PoolManager] Created ", _enemy_pool.size(), " enemies")
 		
+	# Create XP orbs - Area2D is correct
+	print("[PoolManager] Creating XP orb pool...")
 	for i in 200:
 		var orb = Area2D.new()
 		orb.set_script(preload("res://entities/XPOrb.gd"))
 		orb.set("is_active", false)
 		orb.visible = false
 		orb.set_physics_process(false)
+		orb.set_process(false)  # Also disable process
 		_pickup_pool.append(orb)
 		add_child(orb)
+	print("[PoolManager] Created ", _pickup_pool.size(), " xp orbs")
+	
+	print("[PoolManager] All pools created successfully!")
 
 func get_projectile() -> Node2D:
+	var inactive_count = 0
 	for p in _projectile_pool:
 		if not p.get("is_active"):
+			inactive_count += 1
+			print("[PoolManager] Activated projectile from pool (", inactive_count, " available)")
 			return p
-	push_warning("Projectile pool exhausted!")
+	push_warning("[PoolManager] Projectile pool exhausted! All ", _projectile_pool.size(), " projectiles are active")
 	return null
 
 func get_enemy(type: String) -> CharacterBody2D:
+	var inactive_count = 0
 	for e in _enemy_pool:
 		if not e.get("is_active"):
+			inactive_count += 1
 			if e.has_method("configure"):
 				e.configure(GameConfig.get_enemy_data(type))
-			return e
-	push_warning("Enemy pool exhausted!")
+				print("[PoolManager] Activated enemy from pool (", inactive_count, " available)")
+				return e
+	push_warning("[PoolManager] Enemy pool exhausted! All ", _enemy_pool.size(), " enemies are active")
 	return null
 
 func get_xp_orb() -> Area2D:

@@ -42,6 +42,7 @@ func set_magnetized(magnetized: bool, target_pos: Vector2 = Vector2.ZERO, speed:
 	magnet_target = target_pos
 	magnet_speed = speed
 
+# In XPOrb.gd, update _physics_process:
 func _physics_process(delta):
 	if not is_active:
 		return
@@ -59,6 +60,8 @@ func _physics_process(delta):
 			var player = EntityManager.get_player()
 			if player:
 				_on_body_entered(player)
+	
+	queue_redraw()  # Add this line!
 
 func _on_body_entered(body: Node2D):
 	if not is_active:
@@ -72,5 +75,5 @@ func _on_body_entered(body: Node2D):
 			deactivate()
 
 func _draw():
-	var size = 6.0 + sin(Time.get_time_from_start() * 5.0) * 2.0
+	var size = 6.0 + sin(Time.get_ticks_msec() / 1000.0 * 5.0) * 2.0
 	draw_circle(Vector2.ZERO, size, Color.GREEN)

@@ -10,6 +10,12 @@ var damage_cooldown := 0.0
 var flash_timer := 0.0
 
 func _ready():
+	# Reset active state
+	is_active = true
+	damage_cooldown = 0.0
+	flash_timer = 0.0
+	
+	# Create all components fresh
 	movement = MovementComponent.new()
 	movement.name = "movement"
 	movement.initialize(self, GameConfig.player_data.move_speed)
@@ -31,32 +37,40 @@ func _ready():
 	magnet.initialize(self, GameConfig.game_settings.base_pickup_range)
 	add_child(magnet)
 	
+	# Clear any previous registration
+	EntityManager.unregister_entity(self)
 	EntityManager.register_entity(self, "player")
 	
+	# Setup collision
 	collision_layer = 1
 	collision_mask = 2
 	
-	var collision_shape = CollisionShape2D.new()
-	var circle_shape = CircleShape2D.new()
-	circle_shape.radius = GameConfig.player_data.collision_radius
-	collision_shape.shape = circle_shape
-	add_child(collision_shape)
+	# Create collision shape if it doesn't exist
+	if not has_node("CollisionShape2D"):
+		var collision_shape = CollisionShape2D.new()
+		var circle_shape = CircleShape2D.new()
+		circle_shape.radius = GameConfig.player_data.collision_radius
+		collision_shape.shape = circle_shape
+		add_child(collision_shape)
 	
 	# Setup damage detector Area2D
-	damage_detector = Area2D.new()
-	damage_detector.name = "damage_detector"
-	damage_detector.monitoring = true
-	damage_detector.monitorable = false
-	damage_detector.set_collision_layer_value(1, false)  # Don't add to player layer
-	damage_detector.set_collision_mask_value(2, true)   # Detect enemy layer
+	if not has_node("damage_detector"):
+		damage_detector = Area2D.new()
+		damage_detector.name = "damage_detector"
+		damage_detector.monitoring = true
+		damage_detector.monitorable = false
+		damage_detector.set_collision_layer_value(1, false)
+		damage_detector.set_collision_mask_value(2, true)
+		
+		var detect_shape = CollisionShape2D.new()
+		var detect_circle = CircleShape2D.new()
+		detect_circle.radius = GameConfig.player_data.collision_radius
+		detect_shape.shape = detect_circle
+		damage_detector.add_child(detect_shape)
+		damage_detector.body_entered.connect(_on_enemy_contact)
+		add_child(damage_detector)
 	
-	var detect_shape = CollisionShape2D.new()
-	var detect_circle = CircleShape2D.new()
-	detect_circle.radius = GameConfig.player_data.collision_radius
-	detect_shape.shape = detect_circle
-	damage_detector.add_child(detect_shape)
-	damage_detector.body_entered.connect(_on_enemy_contact)
-	add_child(damage_detector)
+	print("[Player] Initialized successfully")
 
 func _physics_process(delta):
 	if not is_active:

@@ -71,19 +71,33 @@ func get_pickups_in_range(pos: Vector2, range: float) -> Array:
 	return result
 
 func clear_all():
-	for e in _enemies:
-		if e.has_method("deactivate"):
+	print("[EntityManager] Clearing all entities...")
+	
+	# Deactivate all enemies
+	for e in _enemies.duplicate():  # Use duplicate to avoid modifying while iterating
+		if e and e.has_method("deactivate"):
 			e.deactivate()
-	for p in _projectiles:
-		if p.has_method("deactivate"):
+	
+	# Deactivate all projectiles
+	for p in _projectiles.duplicate():
+		if p and p.has_method("deactivate"):
 			p.deactivate()
-	for pickup in _pickups:
-		if pickup.has_method("deactivate"):
+	
+	# Deactivate all pickups
+	for pickup in _pickups.duplicate():
+		if pickup and pickup.has_method("deactivate"):
 			pickup.deactivate()
+	
+	# Clear all arrays
 	_enemies.clear()
 	_projectiles.clear()
 	_pickups.clear()
 	_entities.clear()
+	
+	# Don't clear the player reference here - let it be set by the new player
+	_player = null
+	
+	print("[EntityManager] All entities cleared")
 
 func get_entity_count() -> int:
 	return get_enemies().size()
