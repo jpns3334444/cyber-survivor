@@ -39,19 +39,28 @@ func _ready():
 func _input(event):
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
-			KEY_1:  # Changed from F1
+			KEY_1:  # Toggle spawn
 				spawning_enabled = !spawning_enabled
 				print("Spawning: ", spawning_enabled)
-			KEY_2:  # Changed from F2
-				_spawn_enemies(10)
-				print("Spawned 10 enemies")
-			KEY_3:  # Changed from F3
+			KEY_2:  # Force spawn enemies INSIDE viewport
+				print("Spawning 5 enemies INSIDE viewport for testing...")
+				for i in 5:
+					var enemy = PoolManager.get_enemy("zombie")
+					if enemy:
+						# Spawn well inside the viewport for testing
+						var test_pos = Vector2(
+							randf_range(100, 1180),  # Well within 1280 width
+							randf_range(100, 620)     # Well within 720 height
+						)
+						enemy.activate(test_pos)
+						print("Enemy spawned at VISIBLE position: ", test_pos)
+			KEY_3:  # Kill all enemies
 				EntityManager.clear_all()
 				print("Killed all enemies")
-			KEY_4:  # Changed from F4
+			KEY_4:  # Add XP
 				_on_xp_gained(10)
 				print("Added 10 XP")
-			KEY_5:  # Changed from F5
+			KEY_5:  # Print stats
 				print("\n=== GAME STATS ===")
 				print("FPS: ", Engine.get_frames_per_second())
 				print("Pool Usage:")
@@ -82,7 +91,7 @@ func _process(delta):
 			if spawn_timer >= spawn_interval:
 				spawn_timer = 0.0
 				if EntityManager.get_entity_count() < GameConfig.game_settings.max_enemies:
-					_spawn_enemies(3)  # Spawn 3 at a time
+					_spawn_enemies(3)
 					print("[Spawn] Spawned 3 enemies at time: ", snappedf(game_time, 0.1))
 
 func start_game():
@@ -127,23 +136,31 @@ func _spawn_enemies(count: int):
 
 func _get_spawn_position() -> Vector2:
 	var viewport_size = get_viewport().get_visible_rect().size
-	var margin = 50.0
-	var side = randi() % 4
 	
-	match side:
-		0: # Top
-			return Vector2(randf() * viewport_size.x, -margin)
-		1: # Right
-			return Vector2(viewport_size.x + margin, randf() * viewport_size.y)
-		2: # Bottom
-			return Vector2(randf() * viewport_size.x, viewport_size.y + margin)
-		_: # Left
-			return Vector2(-margin, randf() * viewport_size.y)
+	# FOR TESTING: Spawn INSIDE the viewport so we can see them!
+	# Comment this out later and uncomment the margin spawning below
+	return Vector2(
+		randf_range(50, viewport_size.x - 50),
+		randf_range(50, viewport_size.y - 50)
+	)
+	
+	# ORIGINAL CODE (commented out for testing):
+	#var margin = 50.0
+	#var side = randi() % 4
+	#
+	#match side:
+	#	0: # Top
+	#		return Vector2(randf() * viewport_size.x, -margin)
+	#	1: # Right
+	#		return Vector2(viewport_size.x + margin, randf() * viewport_size.y)
+	#	2: # Bottom
+	#		return Vector2(randf() * viewport_size.x, viewport_size.y + margin)
+	#	_: # Left
+	#		return Vector2(-margin, randf() * viewport_size.y)
 
 func _auto_debug():
 	print("[AUTO] State: ", State.keys()[current_state], " | Enemies: ", EntityManager.get_entity_count(), " | Time: ", snappedf(game_time, 0.1), "s | Spawning: ", spawning_enabled)
 
-# Add this new function to GameLoop.gd
 func restart_game():
 	print("[GameLoop] Restarting game...")
 	
@@ -151,7 +168,7 @@ func restart_game():
 	EntityManager.clear_all()
 	
 	# Reset game state
-	current_state = State.MENU  # Set to menu first
+	current_state = State.MENU
 	game_time = 0.0
 	wave_number = 0
 	player_level = 1
@@ -166,7 +183,7 @@ func restart_game():
 		var old_player = main.get_node_or_null("Player")
 		if old_player:
 			old_player.queue_free()
-			await old_player.tree_exited  # Wait for it to be removed
+			await old_player.tree_exited
 		
 		# Create new player
 		var new_player = CharacterBody2D.new()

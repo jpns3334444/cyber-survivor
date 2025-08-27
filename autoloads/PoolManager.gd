@@ -4,27 +4,43 @@ var _projectile_pool := []
 var _enemy_pool := []
 var _pickup_pool := []
 
+# Store reference to the game world where entities should be added
+var world_container: Node2D = null
 
 func _ready():
-	_create_pools()
+	# Don't create pools immediately - wait for the world to be ready
+	call_deferred("_setup_pools")
+
+func _setup_pools():
+	# Find the main scene to add entities to
+	var main_scene = get_tree().current_scene
+	if main_scene:
+		world_container = main_scene
+		_create_pools()
+	else:
+		push_error("[PoolManager] Could not find main scene!")
 
 func _create_pools():
-	print("[PoolManager] Creating object pools...")
+	if not world_container:
+		push_error("[PoolManager] No world container set!")
+		return
+		
+	print("[PoolManager] Creating object pools in world container...")
 	
-	# Create projectiles - MUST be Area2D since Projectile extends Area2D
+	# Create projectiles
 	print("[PoolManager] Creating projectile pool...")
 	for i in 50:
-		var proj = Area2D.new()  # FIXED: was Node2D, must be Area2D
+		var proj = Area2D.new()
 		proj.set_script(preload("res://entities/Projectile.gd"))
 		proj.set("is_active", false)
 		proj.visible = false
 		proj.set_physics_process(false)
-		proj.set_process(false)  # Also disable process
+		proj.set_process(false)
 		_projectile_pool.append(proj)
-		add_child(proj)
+		world_container.add_child(proj)  # Add to world, not PoolManager!
 	print("[PoolManager] Created ", _projectile_pool.size(), " projectiles")
 	
-	# Create enemies - CharacterBody2D is correct
+	# Create enemies
 	print("[PoolManager] Creating enemy pool...")
 	for i in 100:
 		var enemy = CharacterBody2D.new()
@@ -32,11 +48,12 @@ func _create_pools():
 		enemy.set("is_active", false)
 		enemy.visible = false
 		enemy.set_physics_process(false)
+		enemy.set_process(false)
 		_enemy_pool.append(enemy)
-		add_child(enemy)
+		world_container.add_child(enemy)  # Add to world, not PoolManager!
 	print("[PoolManager] Created ", _enemy_pool.size(), " enemies")
 		
-	# Create XP orbs - Area2D is correct
+	# Create XP orbs
 	print("[PoolManager] Creating XP orb pool...")
 	for i in 200:
 		var orb = Area2D.new()
@@ -44,40 +61,34 @@ func _create_pools():
 		orb.set("is_active", false)
 		orb.visible = false
 		orb.set_physics_process(false)
-		orb.set_process(false)  # Also disable process
+		orb.set_process(false)
 		_pickup_pool.append(orb)
-		add_child(orb)
+		world_container.add_child(orb)  # Add to world, not PoolManager!
 	print("[PoolManager] Created ", _pickup_pool.size(), " xp orbs")
 	
 	print("[PoolManager] All pools created successfully!")
 
 func get_projectile() -> Node2D:
-	var inactive_count = 0
 	for p in _projectile_pool:
 		if not p.get("is_active"):
-			inactive_count += 1
-			print("[PoolManager] Activated projectile from pool (", inactive_count, " available)")
 			return p
-	push_warning("[PoolManager] Projectile pool exhausted! All ", _projectile_pool.size(), " projectiles are active")
+	push_warning("[PoolManager] Projectile pool exhausted!")
 	return null
 
 func get_enemy(type: String) -> CharacterBody2D:
-	var inactive_count = 0
 	for e in _enemy_pool:
 		if not e.get("is_active"):
-			inactive_count += 1
 			if e.has_method("configure"):
 				e.configure(GameConfig.get_enemy_data(type))
-				print("[PoolManager] Activated enemy from pool (", inactive_count, " available)")
 				return e
-	push_warning("[PoolManager] Enemy pool exhausted! All ", _enemy_pool.size(), " enemies are active")
+	push_warning("[PoolManager] Enemy pool exhausted!")
 	return null
 
 func get_xp_orb() -> Area2D:
 	for orb in _pickup_pool:
 		if not orb.get("is_active"):
 			return orb
-	push_warning("XP orb pool exhausted!")
+	push_warning("[PoolManager] XP orb pool exhausted!")
 	return null
 
 func get_pool_stats() -> Dictionary:
@@ -102,3 +113,24 @@ func get_pool_stats() -> Dictionary:
 	stats["xp_orbs"] = "%d/%d" % [active_orbs, _pickup_pool.size()]
 	
 	return stats
+
+func clear_all_pools():
+	"""Clear all pools when restarting the game"""
+	for p in _projectile_pool:
+		if p and is_instance_valid(p):
+			p.queue_free()
+	_projectile_pool.clear()
+	
+	for e in _enemy_pool:
+		if e and is_instance_valid(e):
+			e.queue_free()
+	_enemy_pool.clear()
+	
+	for o in _pickup_pool:
+		if o and is_instance_valid(o):
+			o.queue_free()
+	_pickup_pool.clear()
+	
+	# Recreate pools after clearing
+	if world_container:
+		_create_pools()
