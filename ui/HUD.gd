@@ -6,6 +6,7 @@ var health_bar_bg: Panel
 var xp_bar: ProgressBar
 var xp_bar_bg: Panel
 var level_label: Label
+var enemy_counter_label: Label
 var game_over_panel: Panel
 var restart_button: Button
 
@@ -21,15 +22,17 @@ func _ready():
 		restart_button.pressed.connect(_on_restart_button_pressed)
 
 func create_ui_elements():
+	var viewport_size = get_viewport().get_visible_rect().size
+	
 	# XP Bar across entire top of screen
 	xp_bar_bg = Panel.new()
-	xp_bar_bg.size = Vector2(get_viewport().get_visible_rect().size.x, 8)
+	xp_bar_bg.size = Vector2(viewport_size.x, 8)
 	xp_bar_bg.position = Vector2(0, 0)
 	xp_bar_bg.modulate = Color(0.2, 0.2, 0.2, 0.8)
 	add_child(xp_bar_bg)
 	
 	xp_bar = ProgressBar.new()
-	xp_bar.size = Vector2(get_viewport().get_visible_rect().size.x, 8)
+	xp_bar.size = Vector2(viewport_size.x, 8)
 	xp_bar.position = Vector2(0, 0)
 	xp_bar.max_value = 5
 	xp_bar.value = 0
@@ -45,31 +48,30 @@ func create_ui_elements():
 	
 	# Level indicator in center top
 	level_label = Label.new()
-	level_label.text = "1"
+	level_label.text = "Level 1"
 	level_label.add_theme_font_size_override("font_size", 24)
 	level_label.add_theme_color_override("font_color", Color.YELLOW)
 	level_label.add_theme_color_override("font_shadow_color", Color.BLACK)
 	level_label.add_theme_constant_override("shadow_offset_x", 2)
 	level_label.add_theme_constant_override("shadow_offset_y", 2)
-	# Center it
 	level_label.size = Vector2(100, 40)
-	level_label.position = Vector2(get_viewport().get_visible_rect().size.x / 2 - 50, 12)
+	level_label.position = Vector2(viewport_size.x / 2 - 50, 12)
 	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(level_label)
 	
-	# Health bar will be created under player (see below)
+	# Static Health bar in top left corner (below XP bar)
 	health_bar_bg = Panel.new()
-	health_bar_bg.size = Vector2(60, 6)
+	health_bar_bg.size = Vector2(200, 20)
+	health_bar_bg.position = Vector2(10, 20)
 	health_bar_bg.modulate = Color(0.2, 0.2, 0.2, 0.8)
-	health_bar_bg.visible = false  # Hidden until we have player
 	add_child(health_bar_bg)
 	
 	health_bar = ProgressBar.new()
-	health_bar.size = Vector2(60, 6)
+	health_bar.size = Vector2(200, 20)
+	health_bar.position = Vector2(10, 20)
 	health_bar.max_value = 100
 	health_bar.value = 100
 	health_bar.show_percentage = false
-	health_bar.visible = false  # Hidden until we have player
 	# Style the health bar
 	var health_style = StyleBoxFlat.new()
 	health_style.bg_color = Color(0.8, 0.2, 0.2, 1.0)  # Red
@@ -79,10 +81,26 @@ func create_ui_elements():
 	health_bar.add_theme_stylebox_override("background", health_bg_style)
 	add_child(health_bar)
 	
+	# Add HP text label on health bar
+	var hp_label = Label.new()
+	hp_label.name = "HPLabel"
+	hp_label.text = "HP: 100/100"
+	hp_label.add_theme_font_size_override("font_size", 14)
+	hp_label.add_theme_color_override("font_color", Color.WHITE)
+	hp_label.position = Vector2(220, 20)
+	add_child(hp_label)
+	
+	# Enemy counter below health bar
+	enemy_counter_label = Label.new()
+	enemy_counter_label.text = "Enemies: 0"
+	enemy_counter_label.add_theme_font_size_override("font_size", 16)
+	enemy_counter_label.add_theme_color_override("font_color", Color.WHITE)
+	enemy_counter_label.position = Vector2(10, 45)
+	add_child(enemy_counter_label)
+	
 	# Game Over Panel - centered
 	game_over_panel = Panel.new()
 	game_over_panel.size = Vector2(400, 250)
-	var viewport_size = get_viewport().get_visible_rect().size
 	game_over_panel.position = Vector2(viewport_size.x / 2 - 200, viewport_size.y / 2 - 125)
 	game_over_panel.visible = false
 	# Style the panel
@@ -133,29 +151,27 @@ func _process(_delta):
 func _update_ui():
 	player = EntityManager.get_player()
 	
-	# Update health bar position and value
+	# Update health bar value
 	if player and is_instance_valid(player) and player.has_method("get_component"):
 		var health = player.get_component("health")
 		if health:
-			# Position health bar under player
-			var player_screen_pos = player.get_global_transform_with_canvas().origin
-			health_bar.position = player_screen_pos + Vector2(-30, 25)  # Offset under player
-			health_bar_bg.position = health_bar.position
-			
 			health_bar.value = health.current
 			health_bar.max_value = health.max_health
-			health_bar.visible = true
-			health_bar_bg.visible = true
-	else:
-		health_bar.visible = false
-		health_bar_bg.visible = false
+			
+			# Update HP text
+			var hp_label = get_node_or_null("HPLabel")
+			if hp_label:
+				hp_label.text = "HP: %d/%d" % [int(health.current), int(health.max_health)]
 	
 	# Update XP bar
 	var stats = GameLoop.get_game_stats()
 	if stats:
 		xp_bar.value = stats.xp
 		xp_bar.max_value = stats.xp_required
-		level_label.text = str(stats.level)
+		level_label.text = "Level " + str(stats.level)
+		
+		# Update enemy counter
+		enemy_counter_label.text = "Enemies: " + str(stats.enemies)
 		
 		# Update game over stats
 		if game_over_panel.visible:
@@ -173,8 +189,8 @@ func _on_game_over():
 	game_over_panel.visible = true
 
 func _on_player_leveled_up(new_level: int):
-	level_label.text = str(new_level)
-	# Could add a brief animation here
+	level_label.text = "Level " + str(new_level)
+	# Add a brief animation
 	var tween = create_tween()
 	tween.tween_property(level_label, "scale", Vector2(1.5, 1.5), 0.2)
 	tween.tween_property(level_label, "scale", Vector2(1.0, 1.0), 0.2)

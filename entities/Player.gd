@@ -10,12 +10,18 @@ var damage_cooldown := 0.0
 var flash_timer := 0.0
 
 func _ready():
+	print("[Player] Initializing...")
+	
 	# Reset active state
 	is_active = true
 	damage_cooldown = 0.0
 	flash_timer = 0.0
 	
-	# Create all components fresh
+	# Register with EntityManager FIRST
+	EntityManager.register_entity(self, "player")
+	print("[Player] Registered with EntityManager")
+	
+	# Create all components
 	movement = MovementComponent.new()
 	movement.name = "movement"
 	movement.initialize(self, GameConfig.player_data.move_speed)
@@ -36,10 +42,6 @@ func _ready():
 	magnet.name = "magnet"
 	magnet.initialize(self, GameConfig.game_settings.base_pickup_range)
 	add_child(magnet)
-	
-	# Clear any previous registration
-	EntityManager.unregister_entity(self)
-	EntityManager.register_entity(self, "player")
 	
 	# Setup collision
 	collision_layer = 1
@@ -70,7 +72,16 @@ func _ready():
 		damage_detector.body_entered.connect(_on_enemy_contact)
 		add_child(damage_detector)
 	
-	print("[Player] Initialized successfully")
+	# Force update EntityManager's player reference
+	var registered_player = EntityManager.get_player()
+	if registered_player == self:
+		print("[Player] Successfully verified registration")
+	else:
+		print("[Player] WARNING: Registration verification failed!")
+		# Try again
+		EntityManager._player = self
+	
+	print("[Player] Initialized successfully at position: ", position)
 
 func _physics_process(delta):
 	if not is_active:

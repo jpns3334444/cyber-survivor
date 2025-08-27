@@ -24,6 +24,11 @@ CombatSystem="*res://autoloads/CombatSystem.gd"
 EventBus="*res://autoloads/EventBus.gd"
 GameLoop="*res://autoloads/GameLoop.gd"
 
+[debug]
+
+file_logging/enable_file_logging=true
+file_logging/log_path="/home/azure/logs/godot.log "
+
 [display]
 
 window/size/viewport_width=1280
